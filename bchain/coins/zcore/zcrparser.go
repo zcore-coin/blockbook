@@ -1,10 +1,10 @@
 package zcore
 
 import (
-        "blockbook/bchain"
+	"blockbook/bchain"
 	"blockbook/bchain/coins/btc"
+	"blockbook/bchain/coins/utils"
         "bytes"
-        "fmt"
 	"github.com/martinboehm/btcd/wire"
 	"github.com/martinboehm/btcutil/chaincfg"
 )
@@ -58,25 +58,31 @@ func NewZCoreParser(params *chaincfg.Params, c *btc.Configuration) *ZCoreParser 
 
 // ParseBlock parses raw block to our Block struct
 func (p *ZCoreParser) ParseBlock(b []byte) (*bchain.Block, error) {
-        w := wire.MsgBlock{}
-        r := bytes.NewReader(b)
+	r := bytes.NewReader(b)
+	w := wire.MsgBlock{}
+	h := wire.BlockHeader{}
+	err := h.Deserialize(r)
+	if err != nil {
+		return nil, err
+	}
 
-        if err := w.Deserialize(r); err != nil {
-                return nil, err
-        }
-        fmt.Printf("Transactions:",w)
-        txs := make([]bchain.Tx, len(w.Transactions))
-        for ti, t := range w.Transactions {
-                txs[ti] = p.TxFromMsgTx(t, false)
-        }
+	err = utils.DecodeTransactions(r, 0, wire.WitnessEncoding, &w)
+	if err != nil {
+		return nil, err
+	}
 
-        return &bchain.Block{
-                BlockHeader: bchain.BlockHeader{
-                        Size: len(b),
-                        Time: w.Header.Timestamp.Unix(),
-                },
-                Txs: txs,
-        }, nil
+	txs := make([]bchain.Tx, len(w.Transactions))
+	for ti, t := range w.Transactions {
+		txs[ti] = p.TxFromMsgTx(t, false)
+	}
+
+	return &bchain.Block{
+		BlockHeader: bchain.BlockHeader{
+			Size: len(b),
+			Time: h.Timestamp.Unix(),
+		},
+		Txs: txs,
+	}, nil
 }
 
 // GetChainParams contains network parameters for the main ZCore network,

@@ -7,33 +7,137 @@ import (
 	"blockbook/bchain/coins/btc"
 	"bytes"
 	"encoding/hex"
-	"fmt"
-	"github.com/martinboehm/btcutil/chaincfg"
-	"io/ioutil"
 	"math/big"
 	"os"
-	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/martinboehm/btcutil/chaincfg"
 )
 
-type testBlock struct {
-	size int
-	time int64
-	txs  []string
-}
+var (
+	testTx1, testTx2 bchain.Tx
 
-var testParseBlockTxs = map[int]testBlock{
-	// Simple POS block
-	20000: {
-		size: 867,
-		time: 1569345779,
-		txs: []string{
-			"d0febcb8eee13b5305c3ee205717fa8daa2667379283524fb8fbdae11f66d9d3",
-			"a7b1f9801d820a450fb4971db5eb7b498172788817abeb67f6f2846677d31df7",
-                        "053a37155f58dea638b136cbc30a4d23343afcebb94764a9b7e3b211a3f03073",
+	testTxPacked1 = "000088b88bd9c1e338010000000136d54c8ae74f4a6a675f88d2773ef388620ee90d5b1498c6bba19f77474d31c20100000048473044022020e61009263d983c88ff4a72c0a6bc30ff4d2647c7d98f66ec4c402c971b5e07022059aaeb73dcfa84c21956b74007ac75101fcc0c24eb767e202c1f927cc8383cde01ffffffff04000000000000000000002610ab3c00000023210290feb542136d3f0fb2c5a5f397262eb843c8527fed94349d51636969558bb558ac0065cd1d000000001976a91460c809c737cd39e019b092f3232036b0f84f6bf388ac80f0fa02000000001976a914bb1f665d18303a04492b15e5a53b556b88b4830d88ac00000000"
+	testTxPacked2 = "00008bc18bd9c7c13e01000000010c3cf38f4020b2010ab5526a032c37993686f7a89fbfc840ce307909658825320100000049483045022100df16f40a896ac60108d8da08a483a6280a22aa19c9ee8566ec2122f3aedddcc702203bddc40d2780ec621618467d6a4acbe8f87d40cf25a0d5ef3cd74404fe671bfb01ffffffff0400000000000000000040c4ebb752000000232102f7a01fbbb2edbf7c1d460cd7c417cb79670ffc424e891de5ab87c9d730b7d32dac0065cd1d000000001976a914fbbbd120de101e92e76cb682063556b9d5a2988388ac80f0fa02000000001976a914bb1f665d18303a04492b15e5a53b556b88b4830d88ac00000000"
+)
+
+func init() {
+	testTx1 = bchain.Tx{
+		Hex:       "010000000136d54c8ae74f4a6a675f88d2773ef388620ee90d5b1498c6bba19f77474d31c20100000048473044022020e61009263d983c88ff4a72c0a6bc30ff4d2647c7d98f66ec4c402c971b5e07022059aaeb73dcfa84c21956b74007ac75101fcc0c24eb767e202c1f927cc8383cde01ffffffff04000000000000000000002610ab3c00000023210290feb542136d3f0fb2c5a5f397262eb843c8527fed94349d51636969558bb558ac0065cd1d000000001976a91460c809c737cd39e019b092f3232036b0f84f6bf388ac80f0fa02000000001976a914bb1f665d18303a04492b15e5a53b556b88b4830d88ac00000000",
+		Blocktime: 1570257116,
+		Txid:      "eeb64ce4df9df27dca13a9feac4b63d64ebeead9a01cd21146a8ae208f5d59e4",
+		LockTime:  0,
+                Version: 1,
+		Vin: []bchain.Vin{
+			{
+				ScriptSig: bchain.ScriptSig{
+					Hex: "473044022020e61009263d983c88ff4a72c0a6bc30ff4d2647c7d98f66ec4c402c971b5e07022059aaeb73dcfa84c21956b74007ac75101fcc0c24eb767e202c1f927cc8383cde01",
+				},
+				Txid:     "c2314d47779fa1bbc698145b0de90e6288f33e77d2885f676a4a4fe78a4cd536",
+				Vout:     1,
+				Sequence: 4294967295,
+			},
 		},
-	},
+		Vout: []bchain.Vout{
+			{
+				ValueSat: *big.NewInt(0),
+				N:        0,
+				ScriptPubKey: bchain.ScriptPubKey{
+					Hex: "",
+					Addresses: []string{},
+				},
+			},
+			{
+				ValueSat: *big.NewInt(260568000000),
+				N:        1,
+				ScriptPubKey: bchain.ScriptPubKey{
+					Hex: "210290feb542136d3f0fb2c5a5f397262eb843c8527fed94349d51636969558bb558ac",
+					Addresses: []string{
+						"zBX5j16Km6B5ZCHrjmoHWbrGAMTizUJtxr",
+					},
+				},
+			},
+			{
+				ValueSat: *big.NewInt(500000000),
+				N:        2,
+				ScriptPubKey: bchain.ScriptPubKey{
+					Hex: "76a91460c809c737cd39e019b092f3232036b0f84f6bf388ac",
+					Addresses: []string{
+						"zHpPKjVgC5SyVfMdouGaAhrjQCZ6R2ZD4K",
+					},
+				},
+			},
+			{
+				ValueSat: *big.NewInt(50000000),
+				N:        3,
+				ScriptPubKey: bchain.ScriptPubKey{
+					Hex: "76a914bb1f665d18303a04492b15e5a53b556b88b4830d88ac",
+					Addresses: []string{
+						"zS44nzYNkZUWfV1TVVgUqJTeHqSjuPjbsi",
+					},
+				},
+                        },
+		},
+	}
+
+	testTx2 = bchain.Tx{
+		Hex:       "01000000010c3cf38f4020b2010ab5526a032c37993686f7a89fbfc840ce307909658825320100000049483045022100df16f40a896ac60108d8da08a483a6280a22aa19c9ee8566ec2122f3aedddcc702203bddc40d2780ec621618467d6a4acbe8f87d40cf25a0d5ef3cd74404fe671bfb01ffffffff0400000000000000000040c4ebb752000000232102f7a01fbbb2edbf7c1d460cd7c417cb79670ffc424e891de5ab87c9d730b7d32dac0065cd1d000000001976a914fbbbd120de101e92e76cb682063556b9d5a2988388ac80f0fa02000000001976a914bb1f665d18303a04492b15e5a53b556b88b4830d88ac00000000",
+		Blocktime: 1570304095,
+		Txid:      "cc5067a3ca36ea308a31d0dd979761ff59c42241596690da6c66a4aff3ca2cc0",
+		LockTime:  0,
+                Version: 1,
+		Vin: []bchain.Vin{
+			{
+				ScriptSig: bchain.ScriptSig{
+					Hex: "483045022100df16f40a896ac60108d8da08a483a6280a22aa19c9ee8566ec2122f3aedddcc702203bddc40d2780ec621618467d6a4acbe8f87d40cf25a0d5ef3cd74404fe671bfb01",
+				},
+				Txid:     "32258865097930ce40c8bf9fa8f7863699372c036a52b50a01b220408ff33c0c",
+				Vout:     1,
+				Sequence: 4294967295,
+			},
+		},
+		Vout: []bchain.Vout{
+			{
+				ValueSat: *big.NewInt(0),
+				N:        0,
+				ScriptPubKey: bchain.ScriptPubKey{
+					Hex: "",
+					Addresses: []string{},
+				},
+			},
+			{
+				ValueSat: *big.NewInt(355273000000),
+				N:        1,
+				ScriptPubKey: bchain.ScriptPubKey{
+					Hex: "2102f7a01fbbb2edbf7c1d460cd7c417cb79670ffc424e891de5ab87c9d730b7d32dac",
+					Addresses: []string{
+						"zXA9TABXDmuBYDsY1q4Nn51ciYQy15NCKY",
+					},
+				},
+			},
+			{
+				ValueSat: *big.NewInt(500000000),
+				N:        2,
+				ScriptPubKey: bchain.ScriptPubKey{
+					Hex: "76a914fbbbd120de101e92e76cb682063556b9d5a2988388ac",
+					Addresses: []string{
+						"zXwhRKMJM6NJrd3NH7tFoG4GWa6aFrhA4b",
+					},
+				},
+			},
+			{
+				ValueSat: *big.NewInt(50000000),
+				N:        3,
+				ScriptPubKey: bchain.ScriptPubKey{
+					Hex: "76a914bb1f665d18303a04492b15e5a53b556b88b4830d88ac",
+					Addresses: []string{
+						"zS44nzYNkZUWfV1TVVgUqJTeHqSjuPjbsi",
+					},
+				},
+			},
+		},
+	}
 }
 
 func TestMain(m *testing.M) {
@@ -42,187 +146,55 @@ func TestMain(m *testing.M) {
 	os.Exit(c)
 }
 
-func helperLoadBlock(t *testing.T, height int) []byte {
-	name := fmt.Sprintf("block_dump.%d", height)
-	path := filepath.Join("testdata", name)
-
-	d, err := ioutil.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	d = bytes.TrimSpace(d)
-
-	b := make([]byte, hex.DecodedLen(len(d)))
-	_, err = hex.Decode(b, d)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return b
-}
-
-func TestParseBlock(t *testing.T) {
-	p := NewZCoreParser(GetChainParams("main"), &btc.Configuration{})
-
-	for height, tb := range testParseBlockTxs {
-		b := helperLoadBlock(t, height)
-
-		blk, err := p.ParseBlock(b)
-		if err != nil {
-			t.Errorf("ParseBlock() error %v", err)
-		}
-
-		if blk.Size != tb.size {
-			t.Errorf("ParseBlock() block size: got %d, want %d", blk.Size, tb.size)
-		}
-
-		if blk.Time != tb.time {
-			t.Errorf("ParseBlock() block time: got %d, want %d", blk.Time, tb.time)
-		}
-                fmt.Println(blk)
-		if len(blk.Txs) != len(tb.txs) {
-			t.Errorf("ParseBlock() number of transactions: got %d, want %d", len(blk.Txs), len(tb.txs))
-		}
-
-		for ti, tx := range tb.txs {
-			if blk.Txs[ti].Txid != tx {
-				t.Errorf("ParseBlock() transaction %d: got %s, want %s", ti, blk.Txs[ti].Txid, tx)
-			}
-		}
-	}
-}
-
-func Test_GetAddrDescFromAddress_Mainnet(t *testing.T) {
+func TestGetAddrDesc(t *testing.T) {
 	type args struct {
-		address string
+		tx     bchain.Tx
+		parser *ZCoreParser
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr bool
+		name string
+		args args
 	}{
 		{
-			name:    "P2PKH1",
-			args:    args{address: "P9hRjWq6tMqhroxswc2f5jp2ND2py8YEnu"},
-			want:    "76a9140c26ca7967e6fe946f00bf81bcd3b86f43538edf88ac",
-			wantErr: true,
+			name: "zcore-1",
+			args: args{
+				tx:     testTx1,
+				parser: NewZCoreParser(GetChainParams("main"), &btc.Configuration{}),
+			},
+		},
+		{
+			name: "zcore-2",
+			args: args{
+				tx:     testTx2,
+				parser: NewZCoreParser(GetChainParams("main"), &btc.Configuration{}),
+			},
 		},
 	}
-	parser := NewZCoreParser(GetChainParams("main"), &btc.Configuration{})
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parser.GetAddrDescFromAddress(tt.args.address)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetAddrDescFromAddress() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			h := hex.EncodeToString(got)
-			if !reflect.DeepEqual(h, tt.want) {
-				t.Errorf("GetAddrDescFromAddress() = %v, want %v", h, tt.want)
+			for n, vout := range tt.args.tx.Vout {
+				got1, err := tt.args.parser.GetAddrDescFromVout(&vout)
+				if err != nil {
+					t.Errorf("getAddrDescFromVout() error = %v, vout = %d", err, n)
+					return
+				}
+                                if len(vout.ScriptPubKey.Addresses) == 0 {
+                                	continue
+                                }
+				got2, err := tt.args.parser.GetAddrDescFromAddress(vout.ScriptPubKey.Addresses[0])
+				if err != nil {
+					t.Errorf("getAddrDescFromAddress() error = %v, vout = %d", err, n)
+					return
+				}
+				if !bytes.Equal(got1, got2) {
+					t.Errorf("Address descriptors mismatch: got1 = %v, got2 = %v", got1, got2)
+				}
 			}
 		})
 	}
 }
 
-func Test_GetAddressesFromAddrDesc(t *testing.T) {
-	type args struct {
-		script string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    []string
-		want2   bool
-		wantErr bool
-	}{
-		{
-			name:    "P2PKH1",
-			args:    args{script: "76a9140c26ca7967e6fe946f00bf81bcd3b86f43538edf88ac"},
-			want:    []string{"P9hRjWq6tMqhroxswc2f5jp2ND2py8YEnu"},
-			want2:   true,
-			wantErr: true,
-		},
-	}
-
-	parser := NewZCoreParser(GetChainParams("main"), &btc.Configuration{})
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			b, _ := hex.DecodeString(tt.args.script)
-			got, got2, err := parser.GetAddressesFromAddrDesc(b)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetAddressesFromAddrDesc() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetAddressesFromAddrDesc() = %v, want %v", got, tt.want)
-			}
-			if !reflect.DeepEqual(got2, tt.want2) {
-				t.Errorf("GetAddressesFromAddrDesc() = %v, want %v", got2, tt.want2)
-			}
-		})
-	}
-}
-
-var (
-	testTx1       bchain.Tx
-	testTxPacked1 = "0100000002be682a41b6af8c4749cb615040e0175bf5946c48f5b65916f4d113a5be4d14ae000000006a47304402203a18c935588165cbabd9574d6fea3f571e2bf0c215de491f29f938a39db0d5b20220689e8d189b5a08ef6bce5ef373a5fbc61ba92e6493343bc2bbe2b2089d818089012103dbb61883c633d95acca198b60362e40d88415ad539723bdf1b752a3ed9ee3e95ffffffff9c9dab1b8bf81c04b4082a0c9609cea1e57f437a6bb2af9f0947c1accf477328020000006a47304402205bd872a6ae17b908f42c940a0732855a4245ade7d118ea2b95b3322650a8a97b0220016a8f5c2f8d36975420dfd5d3d6f168d0c116e15ff86199cc5685bd78dd7c7f0121035574844d62aa130e5a5a4d96a6494deb049778c0bba25908efb7df07b3386eccffffffff020065cd1d000000001976a91456eee85de46eca1e029701ae23dd0c8b993d59ef88ac6cac3b00000000001976a914b12ca9f42d24b05e1df9f0801f4c48e20e8c943b88ac00000000"
-)
-
-func init() {
-	testTx1 = bchain.Tx{
-		Hex:       "0100000002be682a41b6af8c4749cb615040e0175bf5946c48f5b65916f4d113a5be4d14ae000000006a47304402203a18c935588165cbabd9574d6fea3f571e2bf0c215de491f29f938a39db0d5b20220689e8d189b5a08ef6bce5ef373a5fbc61ba92e6493343bc2bbe2b2089d818089012103dbb61883c633d95acca198b60362e40d88415ad539723bdf1b752a3ed9ee3e95ffffffff9c9dab1b8bf81c04b4082a0c9609cea1e57f437a6bb2af9f0947c1accf477328020000006a47304402205bd872a6ae17b908f42c940a0732855a4245ade7d118ea2b95b3322650a8a97b0220016a8f5c2f8d36975420dfd5d3d6f168d0c116e15ff86199cc5685bd78dd7c7f0121035574844d62aa130e5a5a4d96a6494deb049778c0bba25908efb7df07b3386eccffffffff020065cd1d000000001976a91456eee85de46eca1e029701ae23dd0c8b993d59ef88ac6cac3b00000000001976a914b12ca9f42d24b05e1df9f0801f4c48e20e8c943b88ac00000000",
-		Blocktime: 1569345779,
-		Txid:      "053a37155f58dea638b136cbc30a4d23343afcebb94764a9b7e3b211a3f03073",
-		LockTime:  0,
-		Version:   1,
-		Vin: []bchain.Vin{
-			{
-				ScriptSig: bchain.ScriptSig{
-					Hex: "47304402203a18c935588165cbabd9574d6fea3f571e2bf0c215de491f29f938a39db0d5b20220689e8d189b5a08ef6bce5ef373a5fbc61ba92e6493343bc2bbe2b2089d818089012103dbb61883c633d95acca198b60362e40d88415ad539723bdf1b752a3ed9ee3e95",
-				},
-				Txid:     "ae144dbea513d1f41659b6f5486c94f55b17e0405061cb49478cafb6412a68be",
-				Vout:     0,
-				Sequence: 4294967295,
-			},
-                        {
-                                ScriptSig: bchain.ScriptSig{
-                                        Hex: "47304402205bd872a6ae17b908f42c940a0732855a4245ade7d118ea2b95b3322650a8a97b0220016a8f5c2f8d36975420dfd5d3d6f168d0c116e15ff86199cc5685bd78dd7c7f0121035574844d62aa130e5a5a4d96a6494deb049778c0bba25908efb7df07b3386ecc",
-                                },
-                                Txid:     "287347cfacc147099fafb26b7a437fe5a1ce09960c2a08b4041cf88b1bab9d9c",
-                                Vout:     2,
-                                Sequence: 4294967295,
-                        },
-		},
-		Vout: []bchain.Vout{
-			{
-				ValueSat: *big.NewInt(500000000),
-				N:        0,
-				ScriptPubKey: bchain.ScriptPubKey{
-					Hex: "76a91456eee85de46eca1e029701ae23dd0c8b993d59ef88ac",
-					Addresses: []string{
-						"zGvK8Wns9vhdXYLa3cEPEJqokyWqJqh3bL",
-					},
-				},
-			},
-			{
-				ValueSat: *big.NewInt(3910764),
-				N:        1,
-				ScriptPubKey: bchain.ScriptPubKey{
-					Hex: "76a914b12ca9f42d24b05e1df9f0801f4c48e20e8c943b88ac",
-					Addresses: []string{
-						"zR9Tvg7T1RjrgE3xfiCGrNBXbLgefdRdH3",
-					},
-				},
-			},
-		},
-	}
-}
-
-func Test_PackTx(t *testing.T) {
+func TestPackTx(t *testing.T) {
 	type args struct {
 		tx        bchain.Tx
 		height    uint32
@@ -239,11 +211,22 @@ func Test_PackTx(t *testing.T) {
 			name: "zcore-1",
 			args: args{
 				tx:        testTx1,
-				height:    20000,
-				blockTime: 1569345779,
+				height:    35000,
+				blockTime: 1570257116,
 				parser:    NewZCoreParser(GetChainParams("main"), &btc.Configuration{}),
 			},
 			want:    testTxPacked1,
+			wantErr: false,
+		},
+		{
+			name: "zcore-2",
+			args: args{
+				tx:        testTx2,
+				height:    35777,
+				blockTime: 1570304095,
+				parser:    NewZCoreParser(GetChainParams("main"), &btc.Configuration{}),
+			},
+			want:    testTxPacked2,
 			wantErr: false,
 		},
 	}
@@ -262,7 +245,7 @@ func Test_PackTx(t *testing.T) {
 	}
 }
 
-func Test_UnpackTx(t *testing.T) {
+func TestUnpackTx(t *testing.T) {
 	type args struct {
 		packedTx string
 		parser   *ZCoreParser
@@ -281,7 +264,17 @@ func Test_UnpackTx(t *testing.T) {
 				parser:   NewZCoreParser(GetChainParams("main"), &btc.Configuration{}),
 			},
 			want:    &testTx1,
-			want1:   20000,
+			want1:   35000,
+			wantErr: false,
+		},
+		{
+			name: "zcore-2",
+			args: args{
+				packedTx: testTxPacked2,
+				parser:   NewZCoreParser(GetChainParams("main"), &btc.Configuration{}),
+			},
+			want:    &testTx2,
+			want1:   35777,
 			wantErr: false,
 		},
 	}
