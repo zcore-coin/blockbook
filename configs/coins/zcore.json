@@ -9,7 +9,7 @@
     "backend_rpc": 8095,
     "backend_message_queue": 38395,
     "blockbook_internal": 9095,
-    "blockbook_public": 9195
+    "blockbook_public": 8080
   },
   "ipc": {
     "rpc_url_template": "http://127.0.0.1:{{.Ports.BackendRPC}}",
@@ -40,7 +40,14 @@
     "server_config_file": "bitcoin_like.conf",
     "client_config_file": "bitcoin_like_client.conf",
     "additional_params": {
-      "mempoolexpiry": 72
+      "reindex": "1",
+      "addnode": [
+          "52.53.98.72:17293",
+          "45.32.122.69:17293",
+	  "80.241.222.186:17293",
+          "178.238.228.48:17293",
+          "5.189.131.40:17293"
+      ]
     }
   },
   "blockbook": {

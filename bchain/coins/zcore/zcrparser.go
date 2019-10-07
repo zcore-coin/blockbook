@@ -1,10 +1,7 @@
 package zcore
 
 import (
-	"blockbook/bchain"
 	"blockbook/bchain/coins/btc"
-	"blockbook/bchain/coins/utils"
-        "bytes"
 	"github.com/martinboehm/btcd/wire"
 	"github.com/martinboehm/btcutil/chaincfg"
 )
@@ -53,37 +50,11 @@ type ZCoreParser struct {
 
 // NewZCoreParser returns new ZCoreParser instance
 func NewZCoreParser(params *chaincfg.Params, c *btc.Configuration) *ZCoreParser {
-	return &ZCoreParser{BitcoinParser: btc.NewBitcoinParser(params, c)}
+	return &ZCoreParser{
+		BitcoinParser: btc.NewBitcoinParser(params, c),
+	}
 }
 
-// ParseBlock parses raw block to our Block struct
-func (p *ZCoreParser) ParseBlock(b []byte) (*bchain.Block, error) {
-	r := bytes.NewReader(b)
-	w := wire.MsgBlock{}
-	h := wire.BlockHeader{}
-	err := h.Deserialize(r)
-	if err != nil {
-		return nil, err
-	}
-
-	err = utils.DecodeTransactions(r, 0, wire.WitnessEncoding, &w)
-	if err != nil {
-		return nil, err
-	}
-
-	txs := make([]bchain.Tx, len(w.Transactions))
-	for ti, t := range w.Transactions {
-		txs[ti] = p.TxFromMsgTx(t, false)
-	}
-
-	return &bchain.Block{
-		BlockHeader: bchain.BlockHeader{
-			Size: len(b),
-			Time: h.Timestamp.Unix(),
-		},
-		Txs: txs,
-	}, nil
-}
 
 // GetChainParams contains network parameters for the main ZCore network,
 // the regression test ZCore network, the test ZCore network and
@@ -110,3 +81,5 @@ func GetChainParams(chain string) *chaincfg.Params {
 		return &MainNetParams
 	}
 }
+
+
