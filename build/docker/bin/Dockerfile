@@ -19,7 +19,7 @@ ENV CGO_LDFLAGS="-L/opt/rocksdb -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4"
 RUN mkdir /build
 
 # install and configure go
-RUN cd /opt && wget https://storage.googleapis.com/golang/$GOLANG_VERSION.tar.gz && \
+RUN cd /opt && wget https://storage.googleapis.com/golang/$GOLANG_VERSION.tar.gz --no-check-certificate && \
     tar xf $GOLANG_VERSION.tar.gz
 RUN ln -s /opt/go/bin/go /usr/bin/go
 RUN mkdir -p $GOPATH

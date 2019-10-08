@@ -1,6 +1,10 @@
 package zcore
 
 import (
+	"math"
+	"math/big"
+	"encoding/json"
+	"blockbook/bchain"
 	"blockbook/bchain/coins/btc"
 	"github.com/martinboehm/btcd/wire"
 	"github.com/martinboehm/btcutil/chaincfg"
@@ -82,4 +86,56 @@ func GetChainParams(chain string) *chaincfg.Params {
 	}
 }
 
+
+func (p *ZCoreParser) ParseTxFromJson(jsonTx json.RawMessage) (*bchain.Tx, error) {
+	var getTxResult GetTransactionResult
+	if err := json.Unmarshal([]byte(jsonTx), &getTxResult.Result); err != nil {
+		return nil, err
+	}
+
+	vins := make([]bchain.Vin, len(getTxResult.Result.Vin))
+	for index, input := range getTxResult.Result.Vin {
+		hexData := bchain.ScriptSig{}
+		if input.ScriptSig != nil {
+			hexData.Hex = input.ScriptSig.Hex
+		}
+
+		vins[index] = bchain.Vin{
+			Coinbase:  input.Coinbase,
+			Txid:      input.Txid,
+			Vout:      input.Vout,
+			ScriptSig: hexData,
+			Sequence:  input.Sequence,
+			// Addresses: []string{},
+		}
+	}
+
+	vouts := make([]bchain.Vout, len(getTxResult.Result.Vout))
+	for index, output := range getTxResult.Result.Vout {
+		addr := output.ScriptPubKey.Addresses
+
+		vouts[index] = bchain.Vout{
+			ValueSat: *big.NewInt(int64(math.Round(output.Value * 1e8))),
+			N:        output.N,
+			ScriptPubKey: bchain.ScriptPubKey{
+				Hex:       output.ScriptPubKey.Hex,
+				Addresses: addr,
+			},
+		}
+	}
+
+	tx := &bchain.Tx{
+		Hex:           getTxResult.Result.Hex,
+		Txid:          getTxResult.Result.Txid,
+		Version:       getTxResult.Result.Version,
+		LockTime:      getTxResult.Result.LockTime,
+		Vin:           vins,
+		Vout:          vouts,
+		Confirmations: uint32(getTxResult.Result.Confirmations),
+		Time:          getTxResult.Result.Time,
+		Blocktime:     getTxResult.Result.Blocktime,
+	}
+
+	return tx, nil
+}
 
